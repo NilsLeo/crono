@@ -357,6 +357,12 @@ crono export nutrition -r 30d --csv
 
 Local Playwright session data is stored in `~/.config/crono/playwright-profile`.
 
+When using the local Playwright backend, install the browser binaries once:
+
+```bash
+npx playwright install
+```
+
 **GWT overrides:** If Cronometer updates break the export, override GWT values in `~/.config/crono/config.json` or via environment variables:
 
 ```bash
