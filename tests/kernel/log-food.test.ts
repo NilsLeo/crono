@@ -52,9 +52,16 @@ describe("buildLogFoodCode", () => {
     expect(code).toContain("foodName");
   });
 
+  it("should use shared food dialog logging logic", () => {
+    const code = buildLogFoodCode({ name: "Test Food" });
+    expect(code).toContain("page.locator('tr')");
+    expect(code).toContain("description !== foodName");
+    expect(code).toContain("servingCount !== 1");
+  });
+
   it("should click Add to Diary", () => {
     const code = buildLogFoodCode({ name: "Test Food" });
-    expect(code).toContain("ADD TO DIARY");
+    expect(code).toContain("Add to Diary");
   });
 
   it("should default to 1 serving", () => {
@@ -80,6 +87,6 @@ describe("buildLogFoodCode", () => {
 
   it("should fail with clear error when no results found", () => {
     const code = buildLogFoodCode({ name: "Test Food" });
-    expect(code).toContain("No food found matching");
+    expect(code).toContain("No exact search result found");
   });
 });

@@ -114,8 +114,9 @@ describe("buildQuickAddCode", () => {
 
   it("should check search results instead of silently catching", () => {
     const code = buildQuickAddCode({ protein: 30 });
-    expect(code).toContain("resultsAppeared");
-    expect(code).toContain("Search results did not appear");
+    expect(code).toContain("waitForSelector");
+    expect(code).toContain("No food found matching");
+    expect(code).toContain("No exact search result found");
   });
 
   it("should navigate to target date using prev-day arrows when date is provided", () => {

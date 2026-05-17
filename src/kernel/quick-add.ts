@@ -7,6 +7,7 @@
  */
 
 import type { MacroEntry } from "./client.js";
+import { buildFoodDialogCode } from "./food-dialog.js";
 
 /**
  * Macro names as they appear in Cronometer's food search.
@@ -109,203 +110,16 @@ export function buildQuickAddCode(entry: MacroEntry): string {
       return false;
     }
 
-    // Helper: right-click an element from a list of selectors
-    async function rightClickFirst(selectors, description) {
-      for (const sel of selectors) {
-        try {
-          const el = page.locator(sel);
-          if (await el.count() > 0) {
-            await el.first().click({ button: 'right', timeout: 5000 });
-            return true;
-          }
-        } catch {}
-      }
-      return false;
-    }
-
     // Add each macro as a separate food entry
     for (const macro of macros) {
-      // Right-click meal category with retry (GWT context menus can be flaky)
-      let menuVisible = false;
-      for (let attempt = 0; attempt < 3 && !menuVisible; attempt++) {
-        if (attempt > 0) {
-          // Dismiss any stale state by pressing Escape and clicking away
-          await page.keyboard.press('Escape');
-          await page.mouse.click(1, 1);
-          await page.waitForTimeout(1000);
-        }
-        const clicked = await rightClickFirst([
-          'text="' + mealLabel + '"',
-          ':has-text("' + mealLabel + '")',
-        ]);
-        if (!clicked) {
-          return { success: false, error: 'Could not find meal category "' + mealLabel + '" in diary' };
-        }
-        menuVisible = await page.waitForSelector('text="Add Food..."', { timeout: 3000 })
-          .then(() => true)
-          .catch(() => page.waitForSelector('text="Add Food"', { timeout: 2000 }).then(() => true).catch(() => false));
-      }
-      if (!menuVisible) {
-        return { success: false, error: 'Context menu did not appear after right-clicking "' + mealLabel + '"' };
-      }
-
-      // Click "Add Food..." in context menu
-      const addFoodClicked = await clickFirst([
-        'text="Add Food..."',
-        'text="Add Food…"',
-        'text="Add Food"',
-        '[role="menuitem"]:has-text("Add Food")',
-      ]);
-      if (!addFoodClicked) {
-        return { success: false, error: 'Could not find "Add Food" in context menu' };
-      }
-      await page.waitForTimeout(200);
-
-      // Wait for the "Add Food to Diary" dialog to appear
-      try {
-        await page.waitForSelector('text="Add Food to Diary"', { timeout: 5000 });
-      } catch {
-        return { success: false, error: 'Add Food to Diary dialog did not appear' };
-      }
-      await page.waitForTimeout(300);
-
-      // Click the search bar and type the search term
-      // GWT apps often need click + keyboard.type instead of fill()
-      const searchSelectors = [
-        'input[placeholder*="Search all foods" i]',
-        'input[placeholder*="Search" i]',
-        'input[placeholder*="food" i]',
-        'input.gwt-TextBox',
-        'input[type="text"]',
-        'input[type="search"]',
-      ];
-      let searched = false;
-      for (const sel of searchSelectors) {
-        try {
-          const el = page.locator(sel);
-          if (await el.count() > 0) {
-            await el.first().click();
-            await page.waitForTimeout(200);
-            // Clear any existing text, then type via keyboard for GWT compatibility
-            await el.first().fill('');
-            await page.keyboard.type(macro.searchName, { delay: 50 });
-            searched = true;
-            break;
-          }
-        } catch {}
-      }
-      if (!searched) {
-        return { success: false, error: 'Could not find food search bar in Add Food dialog' };
-      }
-      await page.waitForTimeout(300);
-
-      // Click the SEARCH button to trigger results
-      await clickFirst([
-        'text="SEARCH"',
-        'button:has-text("SEARCH")',
-        'button:has-text("Search")',
-      ]);
-      const resultsAppeared = await page.waitForSelector('td:has-text("' + macro.searchName + '")', { timeout: 8000 })
-        .then(() => true).catch(() => false);
-      if (!resultsAppeared) {
-        return { success: false, error: 'Search results did not appear for "' + macro.searchName + '"' };
-      }
-
-      // Select the search result row (not the search input)
-      // Target table rows/cells containing the macro name
-      const resultSelectors = [
-        'td:has-text("' + macro.searchName + '")',
-        'tr:has-text("' + macro.searchName + '") td',
-        '.gwt-HTML:has-text("' + macro.searchName + '")',
-        'div:has-text("' + macro.searchName + '"):not(:has(input))',
-      ];
-      let resultClicked = false;
-      for (const sel of resultSelectors) {
-        try {
-          const el = page.locator(sel);
-          if (await el.count() > 0) {
-            await el.first().click();
-            resultClicked = true;
-            break;
-          }
-        } catch {}
-      }
-      if (!resultClicked) {
-        return { success: false, error: 'No search result found for "' + macro.searchName + '"' };
-      }
-      await page.waitForTimeout(200);
-
-      // Wait for the detail panel with serving size to appear
-      try {
-        await page.waitForSelector('text="Serving Size"', { timeout: 5000 });
-      } catch {
-        return { success: false, error: 'Serving Size panel did not appear for "' + macro.name + '"' };
-      }
-      await page.waitForTimeout(500);
-
-      // Enter the serving size (grams)
-      // Find the input by locating the "Serving Size" label's parent and
-      // then finding the input within it via page.evaluate()
-      let servingFilled = false;
-      try {
-        servingFilled = await page.evaluate((grams) => {
-          // Walk all elements containing "Serving Size" text
-          const walker = document.createTreeWalker(
-            document.body,
-            NodeFilter.SHOW_TEXT,
-            { acceptNode: (node) =>
-              node.textContent && node.textContent.trim() === 'Serving Size'
-                ? NodeFilter.FILTER_ACCEPT
-                : NodeFilter.FILTER_REJECT
-            }
-          );
-          const textNode = walker.nextNode();
-          if (!textNode) return false;
-
-          // Walk up to find a container that also has an input
-          let container = textNode.parentElement;
-          for (let i = 0; i < 5 && container; i++) {
-            const input = container.querySelector('input');
-            if (input) {
-              input.focus();
-              input.select();
-              // Use native input setter to trigger GWT's change detection
-              const nativeSetter = Object.getOwnPropertyDescriptor(
-                window.HTMLInputElement.prototype, 'value'
-              ).set;
-              nativeSetter.call(input, String(grams));
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-              input.dispatchEvent(new Event('change', { bubbles: true }));
-              return true;
-            }
-            container = container.parentElement;
-          }
-          return false;
-        }, macro.grams);
-      } catch {}
-
-      if (!servingFilled) {
-        return { success: false, error: 'Could not find serving size input for "' + macro.name + '"' };
-      }
-      await page.waitForTimeout(500);
-
-      // Click "ADD TO DIARY"
-      const addClicked = await clickFirst([
-        'button:has-text("ADD TO DIARY")',
-        'button:has-text("Add to Diary")',
-        'text="ADD TO DIARY"',
-        'text="Add to Diary"',
-        'button[type="submit"]',
-      ]);
-      if (!addClicked) {
-        return { success: false, error: 'Could not find "Add to Diary" button for "' + macro.name + '"' };
-      }
-      const dialogDismissed = await page.waitForSelector('text="Add Food to Diary"', { state: 'hidden', timeout: 8000 })
-        .then(() => true).catch(() => false);
-      if (!dialogDismissed) {
-        return { success: false, error: '"Add Food to Diary" dialog did not close after adding "' + macro.name + '"' };
-      }
-      await page.waitForTimeout(500);
+${buildFoodDialogCode({
+  foodNameVar: "macro.searchName",
+  itemNameVar: "macro.name",
+  servingCountVar: "macro.grams",
+  alwaysUpdateServingSize: true,
+  updateServingSize: true,
+  verifyDialogDismissed: true,
+})}
     }
 
     return { success: true };
