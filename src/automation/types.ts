@@ -45,6 +45,10 @@ export interface LogFoodEntry {
   servings?: number;
 }
 
+export interface RecipeData {
+  name: string;
+}
+
 export interface AutomationClient {
   addQuickEntry(
     entry: MacroEntry,
@@ -64,6 +68,7 @@ export interface AutomationClient {
     onStatus?: (msg: string) => void
   ): Promise<void>;
   logFood(entry: LogFoodEntry, onStatus?: (msg: string) => void): Promise<void>;
+  getRecipes(onStatus?: (msg: string) => void): Promise<RecipeData[]>;
 }
 
 export interface PlaywrightExecutionResponse<T = unknown> {
