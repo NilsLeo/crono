@@ -283,6 +283,33 @@ crono diary -r 7d --json
 # → [{"date":"2026-02-11","calories":1847,"protein":168,"carbs":142,"fat":58}, ...]
 ```
 
+### `crono recipes`
+
+List your custom recipes from Cronometer.
+
+```bash
+crono recipes [options]
+```
+
+**Options:**
+
+| Flag | Long     | Description    |
+| ---- | -------- | -------------- |
+|      | `--json` | Output as JSON |
+
+**Examples:**
+
+```bash
+# List all custom recipes
+crono recipes
+# → Chicken Stir Fry
+# → Overnight Oats
+# → 2 recipes
+
+# JSON output for scripting
+crono recipes --json
+```
+
 ### `crono export`
 
 Export data directly from Cronometer's API — no browser automation, much faster than `diary` or `weight`.
