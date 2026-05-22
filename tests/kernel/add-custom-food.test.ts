@@ -77,7 +77,7 @@ describe("buildAddCustomFoodCode", () => {
       log: true,
     });
     expect(code).toContain("cronometer.com/#diary");
-    expect(code).toContain("ADD TO DIARY");
+    expect(code).toContain("Add to Diary");
     expect(code).toContain("Uncategorized");
   });
 
@@ -88,19 +88,19 @@ describe("buildAddCustomFoodCode", () => {
       log: "Dinner",
     });
     expect(code).toContain("cronometer.com/#diary");
-    expect(code).toContain("ADD TO DIARY");
+    expect(code).toContain("Add to Diary");
     expect(code).toContain("Dinner");
   });
 
-  it("should log selected custom food without requiring the Serving Size panel", () => {
+  it("should use shared food dialog logic without requiring the Serving Size panel", () => {
     const code = buildAddCustomFoodCode({
       name: "Test Food",
       protein: 30,
       log: "Snacks",
     });
-    expect(code).toContain("addToDiarySelectors");
-    expect(code).toContain('after selecting "');
-    expect(code).not.toContain("Serving Size panel did not appear");
+    expect(code).toContain("page.locator('tr')");
+    expect(code).toContain("description !== foodName");
+    expect(code).toContain("Food created but ");
   });
 
   it("should normalize meal name in log to title case", () => {

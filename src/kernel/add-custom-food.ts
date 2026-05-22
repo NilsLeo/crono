@@ -7,6 +7,7 @@
  */
 
 import type { CustomFoodEntry } from "./client.js";
+import { buildFoodDialogCode } from "./food-dialog.js";
 
 /**
  * Nutrient labels as they appear in Cronometer's nutrition facts editor.
@@ -182,7 +183,7 @@ export function buildAddCustomFoodCode(entry: CustomFoodEntry): string {
     if (!saveClicked) {
       return { success: false, error: 'Could not find "Save Changes" button' };
     }
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(15000);
 
     // If --log is set, continue to log the food to diary
     if (mealLabel) {
@@ -191,143 +192,10 @@ export function buildAddCustomFoodCode(entry: CustomFoodEntry): string {
       await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       await page.waitForTimeout(500);
 
-      // Helper: right-click an element from a list of selectors
-      async function rightClickFirst(selectors, description) {
-        for (const sel of selectors) {
-          try {
-            const el = page.locator(sel);
-            if (await el.count() > 0) {
-              await el.first().click({ button: 'right' });
-              return true;
-            }
-          } catch {}
-        }
-        return false;
-      }
-
-      // Right-click meal category with retry (GWT context menus can be flaky)
-      let menuVisible = false;
-      for (let attempt = 0; attempt < 3 && !menuVisible; attempt++) {
-        if (attempt > 0) {
-          await page.keyboard.press('Escape');
-          await page.mouse.click(1, 1);
-          await page.waitForTimeout(1000);
-        }
-        const mealClicked = await rightClickFirst([
-          'text="' + mealLabel + '"',
-          ':has-text("' + mealLabel + '")',
-        ], 'meal category');
-        if (!mealClicked) {
-          return { success: false, error: 'Food created but could not find meal category "' + mealLabel + '" in diary' };
-        }
-        menuVisible = await page.waitForSelector('text="Add Food..."', { timeout: 3000 })
-          .then(() => true)
-          .catch(() => page.waitForSelector('text="Add Food"', { timeout: 2000 }).then(() => true).catch(() => false));
-      }
-      if (!menuVisible) {
-        return { success: false, error: 'Food created but context menu did not appear after right-clicking "' + mealLabel + '"' };
-      }
-
-      // Click "Add Food..." in context menu
-      const addFoodClicked = await clickFirst([
-        'text="Add Food..."',
-        'text="Add Food\u2026"',
-        'text="Add Food"',
-        '[role="menuitem"]:has-text("Add Food")',
-      ], 'Add Food menu item');
-      if (!addFoodClicked) {
-        return { success: false, error: 'Food created but could not find "Add Food" in context menu' };
-      }
-      await page.waitForTimeout(200);
-
-      // Wait for "Add Food to Diary" dialog
-      try {
-        await page.waitForSelector('text="Add Food to Diary"', { timeout: 5000 });
-      } catch {
-        return { success: false, error: 'Food created but Add Food to Diary dialog did not appear' };
-      }
-      await page.waitForTimeout(300);
-
-      // Search for the just-created food
-      const searchSelectors = [
-        'input[placeholder*="Search all foods" i]',
-        'input[placeholder*="Search" i]',
-        'input[placeholder*="food" i]',
-        'input.gwt-TextBox',
-        'input[type="text"]',
-        'input[type="search"]',
-      ];
-      let searched = false;
-      for (const sel of searchSelectors) {
-        try {
-          const el = page.locator(sel);
-          if (await el.count() > 0) {
-            await el.first().click();
-            await page.waitForTimeout(200);
-            await el.first().fill('');
-            await page.keyboard.type(foodName, { delay: 50 });
-            searched = true;
-            break;
-          }
-        } catch {}
-      }
-      if (!searched) {
-        return { success: false, error: 'Food created but could not find search bar in Add Food dialog' };
-      }
-      await page.waitForTimeout(300);
-
-      // Click SEARCH
-      await clickFirst([
-        'text="SEARCH"',
-        'button:has-text("SEARCH")',
-        'button:has-text("Search")',
-      ], 'SEARCH button');
-      await page.waitForSelector('td:has-text("' + foodName + '")', { timeout: 8000 }).catch(() => {});
-
-      // Select the search result
-      const resultSelectors = [
-        'td:has-text("' + foodName + '")',
-        'tr:has-text("' + foodName + '") td',
-        '.gwt-HTML:has-text("' + foodName + '")',
-        'div:has-text("' + foodName + '"):not(:has(input))',
-      ];
-      let resultClicked = false;
-      for (const sel of resultSelectors) {
-        try {
-          const el = page.locator(sel);
-          if (await el.count() > 0) {
-            await el.first().click();
-            resultClicked = true;
-            break;
-          }
-        } catch {}
-      }
-      if (!resultClicked) {
-        return { success: false, error: 'Food created but no search result found for "' + foodName + '"' };
-      }
-      await page.waitForTimeout(200);
-
-      // Click "ADD TO DIARY"
-      const addToDiarySelectors = [
-        'button:has-text("ADD TO DIARY")',
-        'button:has-text("Add to Diary")',
-        'text="ADD TO DIARY"',
-        'text="Add to Diary"',
-        'button[type="submit"]',
-      ];
-      const addButtonReady = await page.waitForSelector(addToDiarySelectors.join(', '), { timeout: 5000 })
-        .then(() => true)
-        .catch(() => false);
-      if (!addButtonReady) {
-        return { success: false, error: 'Food created but could not find "Add to Diary" button after selecting "' + foodName + '"' };
-      }
-
-      const addClicked = await clickFirst(addToDiarySelectors, 'ADD TO DIARY button');
-      if (!addClicked) {
-        return { success: false, error: 'Food created but could not find "Add to Diary" button' };
-      }
-      await page.waitForSelector('text="Add Food to Diary"', { state: 'hidden', timeout: 8000 }).catch(() => {});
-      await page.waitForTimeout(300);
+${buildFoodDialogCode({
+  errorPrefix: "Food created but ",
+  requireServingSize: false,
+})}
     }
 
     return { success: true };
