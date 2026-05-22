@@ -123,11 +123,21 @@ program
 
 program
   .command("biometrics")
-  .description("Log biometrics to Cronometer (weight, body fat, blood pressure)")
+  .description(
+    "Log biometrics to Cronometer (weight, body fat, blood pressure)"
+  )
   .option("-w, --weight <value>", "Weight value", parseFloat)
   .option("-b, --body-fat <value>", "Body fat percentage", parseFloat)
-  .option("-s, --systolic <value>", "Systolic blood pressure (mmHg)", parseFloat)
-  .option("-d, --diastolic <value>", "Diastolic blood pressure (mmHg)", parseFloat)
+  .option(
+    "-s, --systolic <value>",
+    "Systolic blood pressure (mmHg)",
+    parseFloat
+  )
+  .option(
+    "-d, --diastolic <value>",
+    "Diastolic blood pressure (mmHg)",
+    parseFloat
+  )
   .option("--date <date>", "Date (YYYY-MM-DD, yesterday, -1d)")
   .option("-u, --unit <unit>", "Weight unit (kg or lbs)", "kg")
   .action(async (options) => {
