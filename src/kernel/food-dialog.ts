@@ -61,19 +61,25 @@ export function buildFoodDialogCode(options: FoodDialogOptions = {}): string {
       return false;
     }
 
-    // Right-click meal category with retry (GWT context menus can be flaky)
+    // Right-click meal category with retry (GWT context menus can be flaky
+    // and meal labels may not render immediately)
     let menuVisible = false;
     for (let attempt = 0; attempt < 3 && !menuVisible; attempt++) {
       if (attempt > 0) {
         await page.keyboard.press('Escape');
         await page.mouse.click(1, 1);
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(2000);
       }
       const clicked = await rightClickFirst([
+        'td:text("' + ${mealLabelVar} + '")',
+        'div:text("' + ${mealLabelVar} + '")',
         'text="' + ${mealLabelVar} + '"',
-        ':has-text("' + ${mealLabelVar} + '")',
       ], 'meal category');
       if (!clicked) {
+        if (attempt < 2) {
+          await page.waitForTimeout(2000);
+          continue;
+        }
         return { success: false, error: '${mealCategoryError}' + ${mealLabelVar} + '" in diary' };
       }
       menuVisible = await page.waitForSelector('text="Add Food..."', { timeout: 3000 })
