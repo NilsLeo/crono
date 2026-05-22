@@ -9,6 +9,7 @@ import { log } from "./commands/log.js";
 import { diary } from "./commands/diary.js";
 import { weight } from "./commands/weight.js";
 import { exportCmd } from "./commands/export.js";
+import { recipes } from "./commands/recipes.js";
 
 const require = createRequire(import.meta.url);
 const { version } = require("../package.json");
@@ -109,6 +110,14 @@ program
   .option("--json", "Output as JSON")
   .action(async (type, options) => {
     await exportCmd(type, options);
+  });
+
+program
+  .command("recipes")
+  .description("List your custom recipes from Cronometer")
+  .option("--json", "Output as JSON")
+  .action(async (options) => {
+    await recipes(options);
   });
 
 program.parse();

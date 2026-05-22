@@ -3,6 +3,7 @@ import { getCredential } from "../credentials.js";
 import { buildAddCustomFoodCode } from "../kernel/add-custom-food.js";
 import { buildDiaryCode } from "../kernel/diary.js";
 import { buildLogFoodCode } from "../kernel/log-food.js";
+import { buildRecipesCode } from "../kernel/recipes.js";
 import {
   buildAutoLoginCode,
   buildLoginCheckCode,
@@ -19,6 +20,7 @@ import type {
   LogFoodEntry,
   MacroEntry,
   PlaywrightExecutionResponse,
+  RecipeData,
   WeightData,
 } from "./types.js";
 
@@ -96,6 +98,21 @@ export function createAutomationClient(
             `Food logging failed: ${data.error ?? "Unknown error"}`
           );
         }
+      }),
+    getRecipes: (onStatus?: (msg: string) => void) =>
+      withLoggedInRuntime(createRuntime, onStatus, async (runtime) => {
+        onStatus?.("Reading custom recipes...");
+        const data = await executeAutomation<{
+          success: boolean;
+          recipes?: RecipeData[];
+          error?: string;
+        }>(runtime, buildRecipesCode(), 30);
+        if (!data.success) {
+          throw new Error(
+            `Recipes read failed: ${data.error ?? "Unknown error"}`
+          );
+        }
+        return data.recipes ?? [];
       }),
   };
 }
