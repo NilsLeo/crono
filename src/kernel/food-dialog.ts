@@ -146,7 +146,7 @@ export function buildFoodDialogCode(options: FoodDialogOptions = {}): string {
     if (!resultsAppeared) {
       return { success: false, error: '${noFoodError}' + ${foodNameVar} + '"' };
     }
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(2000);
 
     // Select the first visible result row whose Description cell exactly
     // matches the requested food. Cronometer renders duplicate result rows, so
@@ -195,16 +195,25 @@ export function buildFoodDialogCode(options: FoodDialogOptions = {}): string {
 
 ${buildServingSizeCode({ errorPrefix, foodNameVar, itemNameVar, requireServingSize, servingCountVar, alwaysUpdateServingSize, updateServingSize })}
 
-    // Click "Add to Diary" button - wait for panel to render, then find button with regex
-    await page.waitForTimeout(500);
-    const addButton = await page.locator('button').filter({ hasText: /add.*diary/i }).first();
-    const addButtonVisible = await addButton.isVisible().catch(() => false);
-    if (!addButtonVisible) {
+    // Click "Add to Diary" button - wait for panel to render, then find button using evaluate
+    await page.waitForTimeout(2000);
+
+    // Find and click the button using page.evaluate
+    const buttonClicked = await page.evaluate(() => {
+      const buttons = document.querySelectorAll('button');
+      for (const btn of buttons) {
+        if (btn.textContent && btn.textContent.trim() === 'Add to Diary' && btn.offsetParent !== null) {
+          btn.click();
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (!buttonClicked) {
       return { success: false, error: ${addToDiaryErrorCode} };
     }
-    console.log('[crono food-dialog] found Add to Diary button for: ' + ${itemNameVar});
-
-    await addButton.click();
+    console.log('[crono food-dialog] found and clicked Add to Diary button for: ' + ${itemNameVar});
     console.log('[crono food-dialog] clicked Add to Diary for: ' + ${itemNameVar});
 ${buildDialogDismissedCode({ itemNameVar, verifyDialogDismissed })}
   `;

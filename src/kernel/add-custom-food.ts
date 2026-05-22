@@ -183,7 +183,7 @@ export function buildAddCustomFoodCode(entry: CustomFoodEntry): string {
     if (!saveClicked) {
       return { success: false, error: 'Could not find "Save Changes" button' };
     }
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(15000);
 
     // If --log is set, continue to log the food to diary
     if (mealLabel) {
