@@ -19,15 +19,7 @@ export interface BiometricEntry {
  * fills in values, and adds to diary.
  */
 export function buildBiometricsCode(entry: BiometricEntry): string {
-  const { type, value, unit, systolic, diastolic, date } = entry;
-
-  // Calculate days back from today
-  const targetDateObj = new Date(date + "T00:00:00");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const daysBack = Math.floor(
-    (today.getTime() - targetDateObj.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const { type, value, unit, systolic, diastolic } = entry;
 
   const biometricName =
     type === "weight"
